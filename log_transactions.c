@@ -1,6 +1,16 @@
 // log_transactions.c
 #include "log_transactions.h"
 
+/**
+ * @brief Parses a transaction from raw data into a `Transaction` structure.
+ *
+ * This function extracts and converts the timestamp from ASCII format to a Unix timestamp.
+ * It then parses additional transaction details such as vehicle registration, product,
+ * mililiters, and transaction ID.
+ *
+ * @param[in]  data       Pointer to the raw data buffer containing transaction information.
+ * @param[out] transaction Pointer to the `Transaction` structure to be filled with parsed data.
+ */
 void parse_transaction(const char *data, Transaction *transaction) {
     struct tm tm;
     memset(&tm, 0, sizeof(struct tm));
@@ -23,7 +33,7 @@ void parse_transaction(const char *data, Transaction *transaction) {
     tm.tm_year -= 1900;
     tm.tm_mon -= 1;     // (0-11)
 
-    // COnvert struct tm to Unix timestamp
+    // Convert struct tm to Unix timestamp
     transaction->timestamp_unix = mktime(&tm);
 
     // Parse other data
@@ -34,12 +44,36 @@ void parse_transaction(const char *data, Transaction *transaction) {
     memcpy(&transaction->transaction_id, data + TRANSAC_OFFSET, sizeof(uint16_t));
 }
 
+/**
+ * @brief Compares two transactions based on their Unix timestamps.
+ *
+ * This function is used for sorting transactions by their timestamp. It compares the Unix
+ * timestamp values of two `Transaction` structures and returns the difference.
+ *
+ * @param[in] a Pointer to the first `Transaction` structure.
+ * @param[in] b Pointer to the second `Transaction` structure.
+ * 
+ * @return An integer less than, equal to, or greater than zero, depending on whether the
+ *         first transaction's timestamp is less than, equal to, or greater than the second
+ *         transaction's timestamp.
+ */
 int compare_transactions(const void *a, const void *b) {
     const Transaction *trans_a = (const Transaction *)a;
     const Transaction *trans_b = (const Transaction *)b;
     return (trans_a->timestamp_unix - trans_b->timestamp_unix);
 }
 
+/**
+ * @brief Formats a transaction record into a human-readable log string.
+ *
+ * This function converts a Unix timestamp from a `Transaction` structure to a formatted
+ * date and time string, and then writes the transaction details into the provided log buffer.
+ *
+ * @param[out] log Pointer to the buffer where the formatted log string will be written.
+ * @param[in] transaction Pointer to the `Transaction` structure containing the data to be formatted.
+ * 
+ * @return The number of bytes written to the `log` buffer.
+ */
 int format_transaction_log(char *log, const Transaction *transaction) {
     // Buffer for formatted date and time
     char formatted_time[20];
