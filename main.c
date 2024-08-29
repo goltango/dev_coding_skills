@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include "log_transactions.h"
 
 void print_buffer(const char *buffer, size_t length) {

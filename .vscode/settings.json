@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "log_transactions.h": "c",
-        "stddef.h": "c"
+        "stddef.h": "c",
+        "string.h": "c"
     }
 }
