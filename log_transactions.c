@@ -14,20 +14,21 @@
 void parse_transaction(const char *data, Transaction *transaction) {
     struct tm tm;
     memset(&tm, 0, sizeof(struct tm));
-    char timestamp[TIMESTAMP_LEN+1];
+    char timestamp_ascii[TIMESTAMP_LEN+1];
 
     // Copy timestamp ASCII format
-    memcpy(timestamp, data, TIMESTAMP_LEN);
-    timestamp[TIMESTAMP_LEN] = '\0';  // Final NULL character
+    memset(timestamp_ascii, '\0', sizeof(timestamp_ascii));
+    memcpy(timestamp_ascii, data, TIMESTAMP_LEN);
+    timestamp_ascii[TIMESTAMP_LEN] = '\0';  // Final NULL character
 
     // Convert timestamp ASCII to time_t (timestamp Unix)
-    sscanf(timestamp, "%2d/%2d/%4d %2d:%2d:%2d",
-           &tm.tm_mday,  // Day of a month
-           &tm.tm_mon,   // Month (0-11 en struct tm)
-           &tm.tm_year,  // Year since 1900
-           &tm.tm_hour,  // Hour
-           &tm.tm_min,   // Minute
-           &tm.tm_sec);  // Second
+    sscanf(timestamp_ascii, "%2d/%2d/%4d %2d:%2d:%2d",
+           &tm.tm_mon,  // Day of a month (0-11 en struct tm)
+           &tm.tm_mday, // day 
+           &tm.tm_year, // Year since 1900
+           &tm.tm_hour, // Hour
+           &tm.tm_min,  // Minute
+           &tm.tm_sec); // Second
 
     // Adjust year and month for tm struct
     tm.tm_year -= 1900;
