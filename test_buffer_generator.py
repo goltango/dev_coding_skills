@@ -12,7 +12,7 @@ The generated C source code is saved as 'buffer_code.c'.
 import random
 import datetime
 
-NUM_TRANSACTIONS = 50
+NUM_TRANSACTIONS_TO_GENERATE = 100
 
 def random_date(start, end):
     return start + datetime.timedelta(days=random.randint(0, (end - start).days))
@@ -34,14 +34,14 @@ def generate_random_transaction(index):
     return f'"{date_str} {time}{label} {number}{code}\\x01\\x00\\x01\\x00\\x01\\x00"'
 
 def generate_buffer():
-    transactions = [generate_random_transaction(i) for i in range(NUM_TRANSACTIONS)]
+    transactions = [generate_random_transaction(i) for i in range(NUM_TRANSACTIONS_TO_GENERATE)]
     buffer = "const char buffer[] =\n" + "\n".join("        " + transaction for transaction in transactions)
     buffer += ";"
     return buffer
 
 def main():
     buffer_code = generate_buffer()
-    buffer_code += f'\nint transactions_generated = {NUM_TRANSACTIONS};'
+    buffer_code += f'\nint transactions_generated = {NUM_TRANSACTIONS_TO_GENERATE};'
 
     with open("buffer_code.c", "w") as file:
         file.write(buffer_code)
