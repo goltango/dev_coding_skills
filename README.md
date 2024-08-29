@@ -6,7 +6,7 @@ Desarrolle una función en C en base a los siguientes requerimientos
 
 La función deberá procesar transacciones de combustible enviadas por diferentes surtidores a través de una interfaz de comunicación serial. Dichas transacciones se almacenan en un buffer en forma contigua sin bytes de padding y con el endianess utilizado por el sistema. La Figura 1 muestra la estructura de los datos recibidos. En la tabla 1 están detallados los significados de los campos que forman una transacción.
 
-![alt text](https://github.com/goltango/dev_coding_skills/blob/main/image1.png?raw=true)
+![alt text](https://github.com/goltango/dev_coding_skills/blob/main/image1.png?)
 
 Cada cierto tiempo, cuando se acumulan una cierta de cantidad de transacciones o transcurre un determinado tiempo la función será llamada teniendo que generar un log de los datos recibidos en otro buffer. El formato del log deberá respetar las siguientes cuestiones
 * Cada transacción deberá ser reportada en ASCII con el siguiente formato [dd/mm/yy hh:mm:ss] id: DDDDD, reg: AAA 1111, prod: A, ltrs: ±DDDDDDD\n
