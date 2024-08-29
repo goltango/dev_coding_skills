@@ -30,7 +30,7 @@ typedef struct {
     uint16_t transaction_id;
 } Transaction;
 
-void parse_transaction(const char *data, Transaction *transaction);
+int parse_transaction(const char *data, Transaction *transaction);
 int compare_transactions(const void *a, const void *b);
 int format_transaction_log(char *log, const Transaction *transaction);
 int log_transactions(const char *data, char *log, size_t transaction_count);

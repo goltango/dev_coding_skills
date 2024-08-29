@@ -1,17 +1,26 @@
 // log_transactions.c
 #include "log_transactions.h"
 
+#define SUCCESS 0
+#define ERROR_INVALID_DATE -1
+
 /**
- * @brief Parses a transaction from raw data into a `Transaction` structure.
+ * @brief Parses transaction data from a given input string.
  *
- * This function extracts and converts the timestamp from ASCII format to a Unix timestamp.
- * It then parses additional transaction details such as vehicle registration, product,
- * mililiters, and transaction ID.
+ * This function extracts and parses various fields, including a timestamp,
+ * vehicle registration, product code, mililiters, and transaction ID from
+ * the provided `data` string. It converts the timestamp from ASCII format
+ * to a Unix timestamp and validates the parsed date and time. If the date
+ * or time is invalid, the function returns an error code.
  *
- * @param[in]  data       Pointer to the raw data buffer containing transaction information.
- * @param[out] transaction Pointer to the `Transaction` structure to be filled with parsed data.
+ * @param[in] data The input string containing the transaction data.
+ * @param[out] transaction A pointer to a Transaction structure where the
+ *                         parsed data will be stored.
+ * 
+ * @return SUCCESS if the transaction is successfully parsed, or 
+ *         ERROR_INVALID_DATE if the date or time is invalid.
  */
-void parse_transaction(const char *data, Transaction *transaction) {
+int parse_transaction(const char *data, Transaction *transaction) {
     struct tm tm;
     memset(&tm, 0, sizeof(struct tm));
     char timestamp_ascii[TIMESTAMP_LEN+1];
@@ -21,21 +30,40 @@ void parse_transaction(const char *data, Transaction *transaction) {
     memcpy(timestamp_ascii, data, TIMESTAMP_LEN);
     timestamp_ascii[TIMESTAMP_LEN] = '\0';  // Final NULL character
 
-    // Convert timestamp ASCII to time_t (timestamp Unix)
-    sscanf(timestamp_ascii, "%2d/%2d/%4d %2d:%2d:%2d",
-           &tm.tm_mon,  // Day of a month (0-11 en struct tm)
-           &tm.tm_mday, // day 
-           &tm.tm_year, // Year since 1900
-           &tm.tm_hour, // Hour
-           &tm.tm_min,  // Minute
-           &tm.tm_sec); // Second
+    // Convert timestamp ASCII to struct tm
+    int parsed_fields = sscanf(timestamp_ascii, "%2d/%2d/%4d %2d:%2d:%2d",
+                               &tm.tm_mon,   // Month (1-12 in input)
+                               &tm.tm_mday,  // Day of the month
+                               &tm.tm_year,  // Year (full, e.g., 2023)
+                               &tm.tm_hour,  // Hour
+                               &tm.tm_min,   // Minute
+                               &tm.tm_sec);  // Second
+
+    // Check if all fields were parsed correctly
+    if (parsed_fields != 6) {
+        return ERROR_INVALID_DATE;
+    }
+
+    // Validate the date and time ranges
+    if (tm.tm_mon < 1 || tm.tm_mon > 12 ||
+        tm.tm_mday < 1 || tm.tm_mday > 31 ||
+        tm.tm_hour < 0 || tm.tm_hour > 23 ||
+        tm.tm_min < 0 || tm.tm_min > 59 ||
+        tm.tm_sec < 0 || tm.tm_sec > 59) {
+        return ERROR_INVALID_DATE;
+    }
 
     // Adjust year and month for tm struct
     tm.tm_year -= 1900;
-    tm.tm_mon -= 1;     // (0-11)
+    tm.tm_mon -= 1;  // Convert month to 0-11 range
 
     // Convert struct tm to Unix timestamp
-    transaction->timestamp_unix = mktime(&tm);
+    time_t timestamp = mktime(&tm);
+    if (timestamp == -1) {
+        return ERROR_INVALID_DATE;
+    }
+
+    transaction->timestamp_unix = timestamp;
 
     // Parse other data
     memcpy(transaction->vehicle_registration, data + TIMESTAMP_LEN, VEH_REG_LEN);
@@ -43,6 +71,8 @@ void parse_transaction(const char *data, Transaction *transaction) {
     transaction->product = *(data + PRODUCT_OFFSET);
     memcpy(&transaction->mililiters, data + MILILIT_OFFSET, sizeof(int32_t));
     memcpy(&transaction->transaction_id, data + TRANSAC_OFFSET, sizeof(uint16_t));
+
+    return SUCCESS;
 }
 
 /**
@@ -95,29 +125,25 @@ int format_transaction_log(char *log, const Transaction *transaction) {
 }
 
 /**
- * @brief Parses and logs a specified number of transactions from a data buffer.
+ * @brief Parses, sorts, and logs transaction data.
  *
- * This function processes a given number of transactions from the input data buffer,
- * sorts them by date, and writes the formatted log entries to the output buffer.
- * If the number of transactions exceeds the maximum allowed, an error is returned.
+ * This function processes a block of transaction data by first parsing each
+ * transaction, sorting them by their timestamp, and then formatting them into
+ * a log. The transactions are limited by `MAX_TRANSACTIONS`. If the transaction
+ * count exceeds this limit or if a parsing error occurs, the function will 
+ * return an error code.
  *
- * @param[in]  data            Pointer to the buffer containing raw transaction data.
- *                             The data must be in the format specified by the transaction structure.
- * @param[out] log             Pointer to the buffer where the formatted log entries will be written.
- *                             The buffer should be large enough to accommodate all log entries.
- * @param[in]  transaction_count The number of transactions to process from the data buffer.
+ * @param[in]  data              Pointer to the raw transaction data.
+ * @param[out] log               Pointer to the buffer where the formatted log will be stored.
+ * @param[in]  transaction_count Number of transactions to process.
  *
- * @return The total number of bytes written to the `log` buffer, excluding the null terminator.
- *         If `transaction_count` exceeds `MAX_TRANSACTIONS`, returns -1 to indicate an error.
- *
- * @note The function assumes that the raw transaction data is stored in a contiguous block
- *       with each transaction having a fixed size defined by `TRANS_FRAME_SIZE`.
- *       Ensure that the `log` buffer is sufficiently sized to prevent overflow, as
- *       the total length of the formatted log entries depends on the number of transactions.
+ * @return The total number of bytes written to the log on success, or -1 on error.
  */
+
 int log_transactions(const char *data, char *log, size_t transaction_count) {
     int total_bytes_written = 0;
     int bytes_written = 0;
+    int result = SUCCESS;
 
     if (transaction_count > MAX_TRANSACTIONS) {
         return -1; // Error: cannot process more than 100 transactions
@@ -127,8 +153,12 @@ int log_transactions(const char *data, char *log, size_t transaction_count) {
 
     // Parse transactions
     for (size_t i = 0; i < transaction_count; i++) {
-        parse_transaction(data + i * TRANS_FRAME_SIZE, &transactions[i]);
-    }
+        result = parse_transaction(data + i * TRANS_FRAME_SIZE, &transactions[i]);
+        if (result != SUCCESS) {
+            fprintf(stderr, "Error parsing transaction at index %zu: %d\n", i, result);
+            return -1;
+        }
+    }   
 
     // Order transactions by date
     qsort(transactions, transaction_count, sizeof(Transaction), compare_transactions);
