@@ -1,30 +1,31 @@
 // log_transactions.c
 #include "log_transactions.h"
 
-/**
- * @brief Parses a raw transaction data buffer into a Transaction structure.
- *
- * This function extracts and copies specific fields from a buffer containing
- * transaction data into a `Transaction` structure. The buffer is assumed to
- * be in a contiguous format without padding bytes. It only fill one transaction,
- * so, multiples calls to this function has to be made if multiples transactions
- * need to be parsed.
- *
- * @param[in]  data        Pointer to the raw data buffer containing transaction information.
- * 
- * @param[out] transaction Pointer to a `Transaction` structure where the parsed data will be stored.
- *
- * @note The `data` buffer should be aligned and formatted according to the defined lengths:
- *       - Timestamp: `TIMESTAMP_LEN` bytes (ASCII)
- *       - Vehicle Registration: `VEH_REG_LEN` bytes (ASCII)
- *       - Product: `PROD_LEN` byte (ASCII)
- *       - Milliliters: `MILS_LEN` bytes (binary, `int32_t`)
- *       - Transaction ID: `TRANSACT_LEN` bytes (binary, `uint16_t`)
- *
- */
 void parse_transaction(const char *data, Transaction *transaction) {
+    struct tm tm;
+    memset(&tm, 0, sizeof(struct tm));
+
+    // Copiar timestamp en formato cadena
     memcpy(transaction->timestamp, data, TIMESTAMP_LEN);
     transaction->timestamp[TIMESTAMP_LEN] = '\0';  // Final NULL character
+
+    // Convertir fecha en formato cadena a time_t (timestamp Unix)
+    sscanf(transaction->timestamp, "%2d/%2d/%4d %2d:%2d:%2d",
+           &tm.tm_mday,  // Día del mes
+           &tm.tm_mon,   // Mes (0-11 en struct tm)
+           &tm.tm_year,  // Año desde 1900
+           &tm.tm_hour,  // Hora
+           &tm.tm_min,   // Minuto
+           &tm.tm_sec);  // Segundo
+
+    // Ajustar el año y mes para struct tm
+    tm.tm_year -= 1900; // Ajuste del año
+    tm.tm_mon -= 1;     // Ajuste del mes (0-11)
+
+    // Convertir struct tm a timestamp Unix
+    transaction->timestamp_unix = mktime(&tm);
+
+    // Parse other data
     memcpy(transaction->vehicle_registration, data + TIMESTAMP_LEN, VEH_REG_LEN);
     transaction->vehicle_registration[VEH_REG_LEN] = '\0';
     transaction->product = *(data + PRODUCT_OFFSET);
@@ -32,56 +33,28 @@ void parse_transaction(const char *data, Transaction *transaction) {
     memcpy(&transaction->transaction_id, data + TRANSAC_OFFSET, sizeof(uint16_t));
 }
 
-/**
- * @brief Compares two transactions based on their timestamps for sorting.
- *
- * This function is used by the `qsort` function to compare two `Transaction` structures.
- * It compares the timestamps of the transactions to determine their order.
- *
- * @param[in]  a  Pointer to the first `Transaction` structure to be compared.
- * @param[in]  b  Pointer to the second `Transaction` structure to be compared.
- *
- * @return An integer less than, equal to, or greater than zero, depending on whether
- *         the timestamp of the first transaction is less than, equal to, or greater than
- *         the timestamp of the second transaction, respectively.
- *
- * @note The function assumes that the timestamps in the `Transaction` structures are
- *       null-terminated strings in a consistent format that can be compared using `strcmp`.
- *       Ensure that the timestamps are properly formatted for correct comparison.
- */
 int compare_transactions(const void *a, const void *b) {
     const Transaction *trans_a = (const Transaction *)a;
     const Transaction *trans_b = (const Transaction *)b;
-    return strcmp(trans_a->timestamp, trans_b->timestamp);
+    return (trans_a->timestamp_unix - trans_b->timestamp_unix);
 }
 
-/**
- * @brief Formats a transaction into a human-readable log string.
- *
- * This function formats the details of a `Transaction` structure into a log string
- * with a specific format. The resulting string is written to the `log` buffer.
- *
- * @param[out] log         Pointer to a buffer where the formatted log string will be written.
- *                         The buffer should be large enough to hold the formatted log entry.
- * @param[in]  transaction Pointer to a `Transaction` structure containing the transaction data
- *                         to be formatted.
- *
- * @return The number of characters written to the `log` buffer, excluding the null terminator.
- *
- * @note The format of the log string is as follows:
- *       - Date and time: [dd/mm/yyyy hh:mm:ss]
- *       - Transaction ID: id: DDDDD
- *       - Vehicle Registration: reg: AAA 1111
- *       - Product: prod: X
- *       - Liters: ltrs: ±DDDDDDD
- *       The `timestamp` field is parsed to extract the day, month, year, and time components.
- *       Ensure that the `log` buffer is appropriately sized to prevent buffer overflow.
- */
 int format_transaction_log(char *log, const Transaction *transaction) {
-    return sprintf(log, "[%.2s/%.2s/%.4s %.8s] id: %05d, reg: %.8s, prod: %c, ltrs: %+.7d\n",
-                   transaction->timestamp + 3, transaction->timestamp, transaction->timestamp + 6,
-                   transaction->timestamp + 11, transaction->transaction_id,
-                   transaction->vehicle_registration, transaction->product,
+    // Buffer para la fecha y hora formateada
+    char formatted_time[20];
+    
+    // Convertir timestamp Unix a struct tm
+    struct tm *time_info = localtime(&transaction->timestamp_unix);
+    
+    // Formatear la fecha y hora en dd/mm/yy hh:mm:ss
+    strftime(formatted_time, sizeof(formatted_time), "%d/%m/%y %H:%M:%S", time_info);
+    
+    // Escribir la transacción en el log con el formato deseado
+    return sprintf(log, "[%s] id: %05d, reg: %.8s, prod: %c, ltrs: %+.7d\n",
+                   formatted_time,
+                   transaction->transaction_id,
+                   transaction->vehicle_registration,
+                   transaction->product,
                    transaction->mililiters / 1000);
 }
 

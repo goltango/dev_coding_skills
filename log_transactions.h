@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include <time.h>
 
 #define TIMESTAMP_LEN 19
 #define VEH_REG_LEN 8
@@ -23,6 +24,7 @@
 
 typedef struct {
     char timestamp[TIMESTAMP_LEN+1];
+    time_t timestamp_unix;
     char vehicle_registration[VEH_REG_LEN+1];
     char product;
     int32_t mililiters;
