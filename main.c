@@ -26,7 +26,7 @@ int main() {
     size_t transaction_count = 3;
     
     // Print raw buffer
-    print_buffer(buffer, sizeof(buffer) - 1);
+    //print_buffer(buffer, sizeof(buffer) - 1);
     
     // Lets define an output buffer for logging
     char log[1024] = {0};
