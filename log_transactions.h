@@ -23,7 +23,6 @@
 #define TRANS_FRAME_SIZE (TIMESTAMP_LEN + VEH_REG_LEN + PROD_LEN + MILS_LEN + TRANSACT_LEN)
 
 typedef struct {
-    char timestamp[TIMESTAMP_LEN+1];
     time_t timestamp_unix;
     char vehicle_registration[VEH_REG_LEN+1];
     char product;

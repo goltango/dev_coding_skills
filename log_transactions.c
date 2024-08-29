@@ -4,25 +4,26 @@
 void parse_transaction(const char *data, Transaction *transaction) {
     struct tm tm;
     memset(&tm, 0, sizeof(struct tm));
+    char timestamp[TIMESTAMP_LEN+1];
 
-    // Copiar timestamp en formato cadena
-    memcpy(transaction->timestamp, data, TIMESTAMP_LEN);
-    transaction->timestamp[TIMESTAMP_LEN] = '\0';  // Final NULL character
+    // Copy timestamp ASCII format
+    memcpy(timestamp, data, TIMESTAMP_LEN);
+    timestamp[TIMESTAMP_LEN] = '\0';  // Final NULL character
 
-    // Convertir fecha en formato cadena a time_t (timestamp Unix)
-    sscanf(transaction->timestamp, "%2d/%2d/%4d %2d:%2d:%2d",
-           &tm.tm_mday,  // Día del mes
-           &tm.tm_mon,   // Mes (0-11 en struct tm)
-           &tm.tm_year,  // Año desde 1900
-           &tm.tm_hour,  // Hora
-           &tm.tm_min,   // Minuto
-           &tm.tm_sec);  // Segundo
+    // Convert timestamp ASCII to time_t (timestamp Unix)
+    sscanf(timestamp, "%2d/%2d/%4d %2d:%2d:%2d",
+           &tm.tm_mday,  // Day of a month
+           &tm.tm_mon,   // Month (0-11 en struct tm)
+           &tm.tm_year,  // Year since 1900
+           &tm.tm_hour,  // Hour
+           &tm.tm_min,   // Minute
+           &tm.tm_sec);  // Second
 
-    // Ajustar el año y mes para struct tm
-    tm.tm_year -= 1900; // Ajuste del año
-    tm.tm_mon -= 1;     // Ajuste del mes (0-11)
+    // Adjust year and month for tm struct
+    tm.tm_year -= 1900;
+    tm.tm_mon -= 1;     // (0-11)
 
-    // Convertir struct tm a timestamp Unix
+    // COnvert struct tm to Unix timestamp
     transaction->timestamp_unix = mktime(&tm);
 
     // Parse other data
@@ -40,16 +41,16 @@ int compare_transactions(const void *a, const void *b) {
 }
 
 int format_transaction_log(char *log, const Transaction *transaction) {
-    // Buffer para la fecha y hora formateada
+    // Buffer for formatted date and time
     char formatted_time[20];
     
-    // Convertir timestamp Unix a struct tm
+    // Convert unix timestamp to tm struct
     struct tm *time_info = localtime(&transaction->timestamp_unix);
     
-    // Formatear la fecha y hora en dd/mm/yy hh:mm:ss
+    // Format to dd/mm/yy hh:mm:ss
     strftime(formatted_time, sizeof(formatted_time), "%d/%m/%y %H:%M:%S", time_info);
     
-    // Escribir la transacción en el log con el formato deseado
+    // Write-down to log
     return sprintf(log, "[%s] id: %05d, reg: %.8s, prod: %c, ltrs: %+.7d\n",
                    formatted_time,
                    transaction->transaction_id,

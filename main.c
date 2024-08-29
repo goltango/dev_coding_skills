@@ -26,54 +26,12 @@ void print_buffer(const char *buffer, size_t length) {
     printf("]\n");
 }
 
-// Function to generate raw transaction data
-void generate_transaction_data(char *buffer, size_t buffer_size) {
-    // Ensure buffer size is sufficient
-    if (buffer_size < NUM_TRANSACTIONS * TRANS_FRAME_SIZE) {
-        fprintf(stderr, "Buffer size is too small.\n");
-        return;
-    }
-
-    // Generate a timestamp in the format "mm/dd/yyyy hh:mm:ss"
-    time_t rawtime;
-    struct tm * timeinfo;
-    char timestamp[TIMESTAMP_LEN + 1]; // Extra byte for null terminator
-    int i;
-
-    // Set up a starting time point
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-
-    for (i = 0; i < NUM_TRANSACTIONS; ++i) {
-        // Update timestamp
-        strftime(timestamp, TIMESTAMP_LEN + 1, "%m/%d/%Y %H:%M:%S", timeinfo);
-        // Increment time by 1 minute for each transaction
-        timeinfo->tm_min += 1;
-        mktime(timeinfo);
-
-        // Fill in the transaction data
-        memcpy(buffer + i * TRANS_FRAME_SIZE, timestamp, TIMESTAMP_LEN);
-        memcpy(buffer + i * TRANS_FRAME_SIZE + TIMESTAMP_LEN, "AAA 1234", VEH_REG_LEN);
-        buffer[i * TRANS_FRAME_SIZE + TIMESTAMP_LEN + VEH_REG_LEN] = 'P'; // Product
-
-        // Example mililiters (e.g., 1000 milliliters)
-        uint32_t mililiters = 1000;
-        memcpy(buffer + i * TRANS_FRAME_SIZE + TIMESTAMP_LEN + VEH_REG_LEN + PROD_LEN, &mililiters, MILS_LEN);
-
-        // Example transaction_id (e.g., 1)
-        uint16_t transaction_id = (uint16_t)(i + 1);
-        memcpy(buffer + i * TRANS_FRAME_SIZE + TIMESTAMP_LEN + VEH_REG_LEN + PROD_LEN + MILS_LEN, &transaction_id, TRANSACT_LEN);
-    }
-}
-
 int main() {
     // Lets simulate a buffer with raw transactions
-    //char buffer[NUM_TRANSACTIONS * TRANS_FRAME_SIZE];
-    //generate_transaction_data(buffer, sizeof(buffer));
     const char buffer[] =
         "11/09/2023 21:52:44BTQ 6704M\x01\x00\x01\x00\x01\x00"  // Transacción 1
         "12/26/2024 15:49:54HRA 2988R\x01\x00\x01\x00\x01\x00"  // Transacción 2
-        "03/14/2023 02:54:22TWM 3861T\x01\x00\x01\x00\x01\x00"  // Transacción 3
+        "02/10/2023 02:54:22TWM 3861T\x01\x00\x01\x00\x01\x00"  // Transacción 3
         "02/10/2023 10:59:51XQC 7972A\x01\x00\x01\x00\x01\x00"  // Transacción 4
         "02/18/2023 06:15:18WNO 5861Z\x01\x00\x01\x00\x01\x00"  // Transacción 5
         "09/04/2024 04:59:32ETJ 3582C\x01\x00\x01\x00\x01\x00"  // Transacción 6
